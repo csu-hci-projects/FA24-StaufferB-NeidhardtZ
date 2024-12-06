@@ -1,100 +1,137 @@
+---
+
+# VR Project: README
+
+## **Overview**
+This project is a VR shooting game where players must destroy targets in a VR environment. Once all targets are destroyed, the game transitions to a "You Win" level. The key features include reloading mechanics, dynamically updating UI, destructible targets, and a win condition.
 
 ---
 
-# Unreal Engine Project: First Person Shooter Mechanics
+## **Features Implemented**
 
-This project implements a series of gameplay mechanics for a first-person shooter (FPS) game in Unreal Engine 5. These include player health, ammo and health pickups, shooting, target destruction, and level progression. Each section below describes the functionality of the various blueprints used in this project.
+### **1. Reloading Mechanic**
+- **Functionality**:
+  - The pistol has an ammo count displayed in the HUD.
+  - The player cannot shoot if the ammo count is `0`.
+  - A reload button resets the ammo count after a delay.
+  - A notification sound plays when reloading is complete.
 
----
-
-## Table of Contents
-1. [Player Health System](#player-health-system)
-2. [HUD Setup](#hud-setup)
-3. [Target Blueprint](#target-blueprint)
-4. [Health Pickup Blueprint](#health-pickup-blueprint)
-5. [Ammo Pickup Blueprint](#ammo-pickup-blueprint)
-6. [Gun Firing Mechanic](#gun-firing-mechanic)
-7. [Level Progression](#level-progression)
-
----
-
-### Player Health System
-
-This blueprint manages the player's health, including damage processing, UI updates, and level restart upon death.
-
-- **Event AnyDamage**: Triggered whenever the player takes damage.
-- **Damage Processing**: Adjusts `CurrentHealth` based on incoming damage and clamps it to ensure it stays within a valid range (between 0 and `MaxHealth`).
-- **Update Health UI**: Calls a function to refresh the health display on the HUD.
-- **Branch Node**: Checks if `CurrentHealth` has dropped to zero. If so, it initiates a level restart by:
-  - **Executing Console Command**: Restarts the level upon death.
-  - **Print String (Debugging)**: Logs "You Died Restarting Level" for development purposes.
-
-### HUD Setup
-
-This blueprint initializes and displays the player's HUD at the start of the game.
-
-- **Event BeginPlay**: Called when the game begins.
-- **Create HUD Widget**: Creates the health widget and stores a reference to it.
-- **Add to Viewport**: Displays the widget in the player’s viewport.
-- **Initialize Health**: Sets the initial values of `CurrentHealth` and `MaxHealth` and updates the HUD.
-
-### Target Blueprint
-
-This blueprint defines the behavior of a destructible target.
-
-- **Event Hit**: Triggered when the target is struck (e.g., by a projectile).
-  - **Health Reduction**: Reduces `CurrentHealth` by a specified amount (e.g., 50).
-  - **Branch Check**: Destroys the target if `CurrentHealth` falls to zero.
-  - **Print String (Debugging)**: Logs "Destroyed!" to indicate target destruction.
-- **Game Mode Interaction**: Updates the target count in the game mode to track remaining targets, helping to manage progression or win conditions.
-
-### Health Pickup Blueprint
-
-This blueprint provides a health pickup that restores the player's health upon collection.
-
-- **On Component Begin Overlap**: Detects when the player collides with the health pickup.
-  - **Cast to BP_FirstPersonCharacter**: Ensures only the player can collect the health pickup.
-  - **Set Health**: Restores the player’s health to a predefined amount (e.g., 100).
-  - **Update Health UI**: Refreshes the HUD to reflect the new health value.
-- **Destroy Actor**: Removes the pickup from the game after use, preventing reuse.
-
-### Ammo Pickup Blueprint
-
-This blueprint defines an ammo pickup, allowing the player to collect additional ammunition.
-
-- **Event ActorBeginOverlap**: Detects when the player collides with the ammo pickup.
-  - **Cast to BP_FirstPersonCharacter**: Confirms that the overlapping actor is the player.
-  - **Add Ammo**: Increases the player’s ammo by a specified amount (e.g., 10).
-  - **Set Ammo**: Updates the ammo count in the player’s variables.
-- **Destroy Actor**: Removes the pickup after collection to prevent further use.
-- **Print String (Debugging)**: Logs "You Found 10 Bullets" to confirm ammo pickup during testing.
-
-### Gun Firing Mechanic
-
-This blueprint implements the shooting functionality, allowing the player to fire projectiles.
-
-- **Input Action (IA_Shoot)**: Triggered when the player presses the shoot button.
-  - **Ammo Check**: Ensures the player has enough ammo. If not, displays "No Ammo" and halts firing.
-- **Projectile Spawn**:
-  - **Socket Location and Camera Rotation**: Retrieves the weapon’s socket position and aligns it with the player’s view.
-  - **Make Transform**: Creates a transform for spawning the projectile.
-  - **Spawn Actor (Projectile)**: Spawns the projectile, simulating a gunshot.
-- **Sound Effect**: Plays a firing sound at the spawn location.
-- **Ammo Decrement**: Reduces ammo by 1 after each shot.
-- **Firing Animation**: Plays an animation montage to provide visual feedback for the shooting action.
-
-### Level Progression
-
-This blueprint controls level progression by checking if all targets have been destroyed before loading the next level.
-
-- **Check All Targets Destroyed**: Custom event that verifies whether all targets in the level have been eliminated.
-  - **Target Counter Check**: Compares the `Target Counter` to zero.
-  - **Branch**: If the counter is zero, it initiates level progression.
-  - **Open Level**: Loads the next level (e.g., "Level2") upon successful target clearance.
+- **Key Steps**:
+  - A `Widget Component` was added to the Pistol Blueprint and linked to a HUD Widget Blueprint (`CR_HUD`).
+  - `AmmoCount` updates dynamically in the widget.
+  - Shooting decreases `AmmoCount`. Reloading resets it after a delay.
 
 ---
 
-## Additional Notes
+### **2. Targets with Dynamic Destruction**
+- **Functionality**:
+  - At least 5 targets are placed in the level.
+  - Each target keeps track of how many times it has been hit:
+    - **First hit**: The target changes its color/material.
+    - **Second hit**: The target is destroyed.
+  - Destroying a target triggers an event that updates a counter in the Level Blueprint.
 
-- **Debugging**: Various "Print String" nodes have been used throughout the blueprints for testing and debugging purposes. These can be disabled or removed in the final build.
-- **Customization**: The values for health restoration, ammo addition, and target count can be modified to suit specific gameplay needs.
+- **Key Steps**:
+  - A `Target_BP` Blueprint was created with:
+    - A `Static Mesh Component` to represent the target.
+    - A `HitCount` variable to track hits.
+    - A material change for the first hit.
+    - Logic to destroy the target on the second hit.
+  - An `Event Dispatcher` was added to `Target_BP` to notify the Level Blueprint when a target is destroyed.
+
+---
+
+### **3. Win Condition**
+- **Functionality**:
+  - The game tracks the number of destroyed targets.
+  - When all targets are destroyed, the game transitions to a "You Win" level.
+
+- **Key Steps**:
+  - The Level Blueprint:
+    - Uses `Get All Actors of Class` to count all `Target_BP` instances at the start of the game.
+    - Binds an event to the `On Target Destroyed` dispatcher in `Target_BP`.
+    - Increments a counter (`Targets Destroyed Counter`) each time a target is destroyed.
+    - Compares the counter to the total number of targets.
+    - Loads the "You Win" level when all targets are destroyed.
+
+---
+
+### **4. You Win Level**
+- **Functionality**:
+  - A new level (`YouWin`) displays a "You Win!" message.
+
+- **Key Steps**:
+  - A new level was created and named `YouWin`.
+  - A Widget Blueprint (`YouWinWidget`) was created to display "You Win!" text.
+  - The `YouWinWidget` was added to the viewport on level load using the **Level Blueprint** of the `YouWin` level.
+
+---
+
+## **Blueprint Logic**
+
+### **Level Blueprint (Main Level)**
+1. **Event Begin Play**:
+   - Uses `Get All Actors of Class` to retrieve all `Target_BP` instances.
+   - Binds the `On Target Destroyed` event for each target to a custom event (`OnTargetDestroyedHandler`).
+   - Stores the total number of targets in a `TotalTargets` variable.
+
+2. **On Target Destroyed Handler**:
+   - Increments the `Targets Destroyed Counter`.
+   - Checks if `Targets Destroyed Counter` equals `TotalTargets`.
+   - If true, loads the "You Win" level using the `Open Level` node.
+
+### **Target_BP**
+1. Tracks hits via a `HitCount` variable:
+   - **First hit**: Changes the material to `HitMaterial`.
+   - **Second hit**: Calls the `On Target Destroyed` dispatcher and destroys the actor.
+
+2. The `On Target Destroyed` dispatcher notifies the Level Blueprint when the target is destroyed.
+
+---
+
+## **Testing**
+
+### **Reloading Mechanic**:
+1. Shoot until `AmmoCount` reaches `0` and confirm shooting is disabled.
+2. Press the reload button and verify:
+   - A delay occurs before ammo resets.
+   - The UI updates to display the new `AmmoCount`.
+
+### **Target Destruction**:
+1. Shoot targets and confirm:
+   - Material changes after the first hit.
+   - Targets are destroyed on the second hit.
+   - The destroyed counter in the Level Blueprint increments.
+
+### **Win Condition**:
+1. Destroy all targets and confirm:
+   - The game transitions to the `YouWin` level.
+
+### **You Win Level**:
+1. Load the `YouWin` level and verify:
+   - The "You Win!" message is displayed.
+
+---
+
+## **Known Issues and Troubleshooting**
+- **Targets Not Destroying**:
+  - Verify the `HitCount` logic in `Target_BP`.
+  - Ensure the `Destroy Actor` node is triggered after the dispatcher.
+
+- **Win Level Not Loading**:
+  - Confirm the `Targets Destroyed Counter` equals `TotalTargets`.
+  - Ensure the `On Target Destroyed` dispatcher is called in `Target_BP`.
+
+- **Widget Not Updating**:
+  - Verify the `Widget Component` in the Pistol Blueprint is linked to the `CR_HUD` widget.
+
+---
+
+## **Future Enhancements**
+- Add animations or particle effects for targets being destroyed.
+- Include a restart button in the `YouWinWidget` to reset the game.
+- Add audio feedback for reloading, shooting, and destroying targets.
+
+---
+
+Let me know if you need this README as a file or additional sections!
