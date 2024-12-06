@@ -134,4 +134,3 @@ This project is a VR shooting game where players must destroy targets in a VR en
 
 ---
 
-Let me know if you need this README as a file or additional sections!
